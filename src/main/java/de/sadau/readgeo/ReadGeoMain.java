@@ -93,74 +93,74 @@ public class ReadGeoMain {
 
 	final static Function<File, ? extends Metadata> extractMetadata = (
 			final File imageFile) -> {
-				try {
-					final Metadata metadata = ImageMetadataReader
-							.readMetadata(imageFile);
-					return metadata;
-				} catch (final Exception e) {
-					System.out.println("Couldn't read " + imageFile.toString());
-					return null;
-				}
-			};
-			static BiConsumer<String, List<Metadata>> print = (s, lm) -> {
-				System.out.printf("%s :", s);
+		try {
+			final Metadata metadata = ImageMetadataReader
+					.readMetadata(imageFile);
+			return metadata;
+		} catch (final Exception e) {
+			System.out.println("Couldn't read " + imageFile.toString());
+			return null;
+		}
+	};
+	static BiConsumer<String, List<Metadata>> print = (s, lm) -> {
+		System.out.printf("%s :", s);
 
-				System.out.printf("\n");
+		System.out.printf("\n");
 
-			};
+	};
 
-			public static void main(final String[] args) throws FileNotFoundException,
+	public static void main(final String[] args) throws FileNotFoundException,
 			JAXBException, SAXException {
-				final String imageDir = "pictures";
-				final File picturesDir = Paths.get(imageDir).toFile();
-				// processToGpx(picturesDir);
-				processToCSV(picturesDir, new PrintStream(new FileOutputStream(
-						"out.csv", false)));
+		final String imageDir = "pictures";
+		final File picturesDir = Paths.get(imageDir).toFile();
+		processToGpx(picturesDir);
+		processToCSV(picturesDir, new PrintStream(new FileOutputStream(
+				"out.csv", false)));
+	}
+
+	static void processToCSV(final File picturesDir, final PrintStream outStream) {
+		final Set<GpsCoordinate> used = new HashSet<>();
+		processGpsMetadata(picturesDir, (s, gpsDir) -> {
+			final GpsCoordinate coord = new GpsCoordinate(gpsDir
+					.getGeoLocation().getLongitude(), gpsDir.getGeoLocation()
+					.getLatitude());
+			if (!used.contains(coord)) {
+				used.add(coord);
+				outStream.printf("%s, %s, %s \n", s, coord.latitude,
+						coord.longitude);
 			}
+		});
 
-			static void processToCSV(final File picturesDir, final PrintStream outStream) {
-				final Set<GpsCoordinate> used = new HashSet<>();
-				processGpsMetadata(picturesDir, (s, gpsDir) -> {
-					final GpsCoordinate coord = new GpsCoordinate(gpsDir
-							.getGeoLocation().getLongitude(), gpsDir.getGeoLocation()
-							.getLatitude());
-					if (!used.contains(coord)) {
-						used.add(coord);
-						outStream.printf("%s, %s, %s \n", s, coord.latitude,
-								coord.longitude);
-					}
-				});
+	}
 
-			}
-
-			static void processToGpx(final File picturesDir) throws JAXBException,
+	static void processToGpx(final File picturesDir) throws JAXBException,
 			PropertyException {
-				final ObjectFactory objFac = new ObjectFactory();
-				final GpxType gpx = objFac.createGpxType();
-				processGpsMetadata(picturesDir, (s, gpsDir) -> {
-					final WptType wpt = objFac.createWptType();
-					wpt.setLat(BigDecimal
-							.valueOf(gpsDir.getGeoLocation().getLatitude()));
-					wpt.setLon(BigDecimal.valueOf(gpsDir.getGeoLocation()
-							.getLongitude()));
-					gpx.getWpt().add(wpt);
-				});
+		final ObjectFactory objFac = new ObjectFactory();
+		final GpxType gpx = objFac.createGpxType();
+		processGpsMetadata(picturesDir, (s, gpsDir) -> {
+			final WptType wpt = objFac.createWptType();
+			wpt.setLat(BigDecimal
+					.valueOf(gpsDir.getGeoLocation().getLatitude()));
+			wpt.setLon(BigDecimal.valueOf(gpsDir.getGeoLocation()
+					.getLongitude()));
+			gpx.getWpt().add(wpt);
+		});
 
-				final File file = new File("out.gpx");
-				final JAXBContext jaxbContext = JAXBContext.newInstance(GpxType.class);
-				final Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+		final File file = new File("out.gpx");
+		final JAXBContext jaxbContext = JAXBContext.newInstance(GpxType.class);
+		final Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
 
-				// output pretty printed
-				jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+		// output pretty printed
+		jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 
-				final JAXBElement<GpxType> jaxbElement = objFac.createGpx(gpx);
-				jaxbMarshaller.marshal(jaxbElement, file);
-			}
+		final JAXBElement<GpxType> jaxbElement = objFac.createGpx(gpx);
+		jaxbMarshaller.marshal(jaxbElement, file);
+	}
 
-			private static void processGpsMetadata(final File picturesDir,
-					final BiConsumer<String, GpsDirectory> gpsDirProcessor) {
-				final Map<String, List<Metadata>> allMetaData = extractMetadata(picturesDir);
-				allMetaData
+	private static void processGpsMetadata(final File picturesDir,
+			final BiConsumer<String, GpsDirectory> gpsDirProcessor) {
+		final Map<String, List<Metadata>> allMetaData = extractMetadata(picturesDir);
+		allMetaData
 				.entrySet()
 				.stream()
 				.sorted((f1, f2) -> {
@@ -178,12 +178,12 @@ public class ReadGeoMain {
 							}
 
 						});
-			}
-
-			private static Map<String, List<Metadata>> extractMetadata(
-			final File picturesDir) {
-		return Arrays.stream(picturesDir.listFiles()).collect(
-				groupingBy(File::toString,
-						mapping(extractMetadata, toListAndRemoveNulls)));
 	}
+
+	private static Map<String, List<Metadata>> extractMetadata(
+					final File picturesDir) {
+				return Arrays.stream(picturesDir.listFiles()).collect(
+						groupingBy(File::toString,
+								mapping(extractMetadata, toListAndRemoveNulls)));
+			}
 }
